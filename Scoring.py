@@ -64,8 +64,18 @@ def main():
 	#		writer.write(str(score[0]) + "\t" + str(score[1]) + "\n")
 
 def compute_score(infile,outdir):
-	print("Hello")
-	clean.clean_all(savedir)
+	if(not os.path.exists(outdir)): os.makedirs(outdir)
+
+	seq_conv = seq.SeqConvert(infile)
+	netphorest_frame = seq_conv.get_trimmed_netphorest_frame()
+	for schema in list_all_schemas():
+		scores = get_scores(netphorest_frame,schema[1])
+		outfile = "%s/%s.txt" % (outdir,schema[0])
+		writer = open(outfile,'wb')
+		sorted_scores = sorted(scores.items(),key=operator.itemgetter(1))
+		for score in sorted_scores:
+			writer.write(str(score[0]) + "\t" + str(score[1]) + "\n")
+	clean.clean_all(outdir)
 
 
 #Returns a dictionary containing the scores for each peptide
