@@ -44,9 +44,26 @@ class SeqConvert:
 	def get_sequence_frame(self):
 		df = pd.DataFrame.from_csv(self.filename,sep=" ",index_col=-1)
 		df.drop_duplicates(inplace=True)
+		
 		indices = list(df.index)
 		sequences, sites = self.strip_sites(indices)
+
+		drop_list = []
+		renamed_index = {}
+		sequence_set = set()
+
+		for i,sequence in enumerate(sequences):
+			if(sequence in sequence_set):
+				drop_list.append(indices[i])
+				sites.pop(i)
+			else:
+				renamed_index[indices[i]] = sequence
+				sequence_set.add(sequence)
+
+		df = df.drop(labels=drop_list, axis=0)
 		renamed_index = {indices[i]: sequence for i,sequence in enumerate(sequences)}
+				
+
 		df = df.rename(index=renamed_index)
 		df['sites'] = sites
 		return df
