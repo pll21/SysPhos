@@ -12,13 +12,15 @@ import fnmatch
 #./Scoring.py Validation/459_Valid_HuangPKA/ValData33noise.txt Results_Folder
 
 def main():
+	randomization = True
+
 	data_location = sys.argv[1]
 	#Handle file case
 	if(os.path.isfile(data_location)):
 		print("Now working on %s" % data_location)
 		savedir = "Results_%s" % data_location
 		savedir = savedir[:savedir.rfind(".txt")]
-		compute_scores(data_location, savedir)
+		compute_scores(data_location, savedir,randomization)
 	#Handle directory case
 	elif(os.path.isdir(data_location)):
 		for root, dirnames, filenames in os.walk(data_location):
@@ -26,18 +28,18 @@ def main():
 				filepath = os.path.join(root, filename)
 				savedir = "Results_%s" % filepath[:filepath.rfind(".")]
 				print("Now working on %s" % filepath)
-				compute_scores(filepath, savedir)
+				compute_scores(filepath, savedir,randomization)
 	else:
 		print("SysPhos could not find file or directory")
 
 
-def compute_scores(infile,outdir):
+def compute_scores(infile,outdir,randomization):
 	if(not os.path.exists(outdir)): os.makedirs(outdir)
-	seq_conv = seq.SeqConvert(infile)
+	seq_conv = seq.SeqConvert(infile,randomization)
 	netphorest_frame = seq_conv.get_trimmed_netphorest_frame()
 	
 	print("\tCalculating Scores")
-	print("\t\tOutdirectory: %s" % outdir)
+	#print("\t\tOutdirectory: %s" % outdir)
 	for schema in list_all_schemas():
 		kinase_outfile = "%s/kinase_scores_%s.txt" % (outdir,schema[0])
 		kinase_writer = open(kinase_outfile,'wb')
@@ -45,7 +47,7 @@ def compute_scores(infile,outdir):
 		peptide_outfile = "%s/peptide_scores_%s.txt" % (outdir,schema[0])
 		peptide_writer = open(peptide_outfile,'wb')
 
-		print("\t\tKinase Outfile: %s\tPeptide Outfile: %s\t" % (kinase_outfile,peptide_outfile))
+		#print("\t\tKinase Outfile: %s\tPeptide Outfile: %s\t" % (kinase_outfile,peptide_outfile))
 
 		kinase_scores,peptide_power_scores = get_scores(netphorest_frame,schema[1])
 		sorted_scores = sorted(kinase_scores.items(),key=operator.itemgetter(1))
