@@ -12,6 +12,9 @@ class SeqConvert:
 	def get_trimmed_netphorest_frame(self):
 		all_series = list()
 		netphorest_frame, sequence_frame = self.get_netphorest_frame()
+
+		print("\tTrimming NetPhorest DataFrame")
+
 		for row in netphorest_frame.iterrows():
 			peptide_num = row[0]
 			peptide_info = sequence_frame.ix[int(peptide_num)]
@@ -29,9 +32,12 @@ class SeqConvert:
 	#Returns a data frame containing all the relevant Netphorest Phosphorylation site predictions
 	def get_netphorest_frame(self):
 		sequence_frame = self.get_sequence_frame()
-		self.write_sequence_file("sequences.fasta",sequence_frame)
-		os.system("cat sequences.fasta | ./netphorest > NetPhorest_Predictions.txt")
-		netphorest_frame = pd.DataFrame.from_csv("NetPhorest_Predictions.txt",sep="\t",index_col=0)
+
+		print("\tGenerating NetPhorest DataFrame")
+
+		self.write_sequence_file(".sequences.fasta",sequence_frame)
+		os.system("cat .sequences.fasta | ./netphorest > .NetPhorest_Predictions.txt")
+		netphorest_frame = pd.DataFrame.from_csv(".NetPhorest_Predictions.txt",sep="\t",index_col=0)
 		cols = netphorest_frame.columns.values
 		renamed_columns = {cols[i - 1]: cols[i] for i in range(1,7)}
 		renamed_columns['Classifier'] = 'Prediction'
@@ -42,23 +48,29 @@ class SeqConvert:
 	#Reads sequences, p-vaylues, fold-change values, and site information from text file.
 	#Format of text file that this method expects will be documented later
 	def get_sequence_frame(self):
+		print("\tGenerating Sequence DataFrame")
+
 		df = pd.DataFrame.from_csv(self.filename,sep=" ",index_col=-1)
-		df.drop_duplicates(inplace=True)
-		
+		df = df.groupby(df.index).first()
+	
 		indices = list(df.index)
 		sequences, sites = self.strip_sites(indices)
 
 		drop_list = []
+		pop_list = []
 		renamed_index = {}
 		sequence_set = set()
 
 		for i,sequence in enumerate(sequences):
 			if(sequence in sequence_set):
 				drop_list.append(indices[i])
-				sites.pop(i)
+				pop_list.append(i)
 			else:
 				renamed_index[indices[i]] = sequence
 				sequence_set.add(sequence)
+
+		for i in reversed(pop_list):
+			sites.pop(i)
 
 		df = df.drop(labels=drop_list, axis=0)
 		renamed_index = {indices[i]: sequence for i,sequence in enumerate(sequences)}
@@ -66,6 +78,7 @@ class SeqConvert:
 
 		df = df.rename(index=renamed_index)
 		df['sites'] = sites
+
 		return df
 
 	#Removes Mass-Spec charge information from sequence strings
