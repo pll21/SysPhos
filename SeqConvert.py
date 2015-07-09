@@ -78,7 +78,7 @@ class SeqConvert:
 
 		df = df.rename(index=renamed_index)
 		df['sites'] = sites
-
+		print(df)
 		return df
 
 	#Removes Mass-Spec charge information from sequence strings

@@ -16,7 +16,8 @@ def main():
 	#Handle file case
 	if(os.path.isfile(data_location)):
 		print("Now working on %s" % data_location)
-		savedir = ("Results_%s" % data_location if len(sys.argv) < 2 else sys.argv[2])
+		savedir = "Results_%s" % data_location
+		savedir = savedir[:savedir.rfind(".txt")]
 		compute_scores(data_location, savedir)
 	#Handle directory case
 	elif(os.path.isdir(data_location)):
