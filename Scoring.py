@@ -20,7 +20,6 @@ def main():
 	else:
 		num_iterations = 0
 
-
 	#Handle file case
 	if(os.path.isfile(data_location)):
 		print("Now working on %s" % data_location)
@@ -76,6 +75,29 @@ def write_kinase_and_peptide_scores(infile,outdir):
 				
 	clean.clean_all(outdir)
 
+def write_kinase_scores(infile,ourdir):
+	if(not os.path.exists(outdir)): os.makedirs(outdir)
+	seq_conv = seq.SeqConvert(infile,True)
+	netphorest_frame = seq_conv.get_trimmed_netphorest_frame()
+	for schema in list_all_schemas():
+		kinase_outfile = "%s/kinase_scores_%s.txt" % (outdir,schema[0])
+		kinase_writer = open(kinase_outfile,'wb')
+
+		kinase_scores = compute_kinase_scores(netphorest_frame,schema[1])
+		sorted_scores = sorted(kinase_scores.items(),key=operator.itemgetter(1))
+
+		for score in sorted_scores:
+			kinase_prediction = str(score[0])
+			kinase_score = str(score[1])
+
+			kinase_writer.write("%s\t%s\n" % (kinase_prediction,kinase_score))
+
+
+def permutation_test(infile,outdir,num_iterations):
+	for x in xrange(0,num_iterations):
+		print("Working on permutation #%s" % str(x))
+		write_kinase_scores(infile, outdir + str(x))
+
 #Returns a dictionary containing the scores for each peptide
 #Parameters: infile - file with list of peptides with significance and fold-change values
 #Parameters: outdir - directory to save results to
@@ -112,9 +134,6 @@ def compute_kinase_scores(netphorest_frame,schema):
 		kinase_scores[prediction] = (kinase_scores[prediction] if prediction in kinase_scores else 0) + curr_score
 
 	return kinase_scores
-
-def permutation_test(infile,outdir,num_iterations):
-	return "To be implemented"
 
 def list_all_schemas():
 	return [("Sig_Conf", lambda s,fc,c : c / s),
