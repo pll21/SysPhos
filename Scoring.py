@@ -14,11 +14,7 @@ import fnmatch
 def main():
 
 	data_location = sys.argv[1]
-
-	if(len(sys.argv) > 2):
-		num_iterations = sys.argv[2]
-	else:
-		num_iterations = 0
+	num_iterations = (int(sys.argv[2]) if len(sys.argv) > 2 else 0)
 
 	#Handle file case
 	if(os.path.isfile(data_location)):
@@ -75,7 +71,7 @@ def write_kinase_and_peptide_scores(infile,outdir):
 				
 	clean.clean_all(outdir)
 
-def write_kinase_scores(infile,ourdir):
+def write_kinase_scores(infile,outdir):
 	if(not os.path.exists(outdir)): os.makedirs(outdir)
 	seq_conv = seq.SeqConvert(infile,True)
 	netphorest_frame = seq_conv.get_trimmed_netphorest_frame()
@@ -96,7 +92,8 @@ def write_kinase_scores(infile,ourdir):
 def permutation_test(infile,outdir,num_iterations):
 	for x in xrange(0,num_iterations):
 		print("Working on permutation #%s" % str(x))
-		write_kinase_scores(infile, outdir + str(x))
+		#write_kinase_scores(infile, outdir + str(x))
+		write_kinase_scores(infile,"%s/Permutation%s" % (outdir,str(x)))
 
 #Returns a dictionary containing the scores for each peptide
 #Parameters: infile - file with list of peptides with significance and fold-change values
