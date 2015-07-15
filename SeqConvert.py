@@ -3,11 +3,13 @@
 import pandas as pd
 import os
 import numpy as np
+import random
 
 class SeqConvert:
 
-	def __init__(self,filename):
+	def __init__(self,filename,randomization):
 		self.filename = filename
+		self.randomization = randomization
 
 	def get_trimmed_netphorest_frame(self):
 		all_series = list()
@@ -78,8 +80,22 @@ class SeqConvert:
 
 		df = df.rename(index=renamed_index)
 		df['sites'] = sites
-		print(df)
+
+		if(self.randomization): df = self.randomize_sequence_weights(df)
 		return df
+
+	def randomize_sequence_weights(self, dataframe):
+		pvals = list(dataframe['pval'])
+		fc = list(dataframe['fc'])
+
+		combined = zip(pvals, fc)
+		random.shuffle(combined)
+		pvals[:], fc[:] = zip(*combined)
+
+		dataframe['pval'] = pvals
+		dataframe['fc'] = fc
+		return dataframe
+
 
 	#Removes Mass-Spec charge information from sequence strings
 	#Returns a tuple containing:

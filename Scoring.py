@@ -12,15 +12,22 @@ import fnmatch
 #./Scoring.py Validation/459_Valid_HuangPKA/ValData33noise.txt Results_Folder
 
 def main():
-	randomization = True
+	
 
 	data_location = sys.argv[1]
+
+	if(len(sys.argv) > 2):
+		num_iterations = sys.argv[2]
+	else:
+		num_iterations = 0
+
+
 	#Handle file case
 	if(os.path.isfile(data_location)):
 		print("Now working on %s" % data_location)
 		savedir = "Results_%s" % data_location
 		savedir = savedir[:savedir.rfind(".txt")]
-		compute_scores(data_location, savedir,randomization)
+		write_kinase_and_peptide_scores(data_location, savedir)
 	#Handle directory case
 	elif(os.path.isdir(data_location)):
 		for root, dirnames, filenames in os.walk(data_location):
@@ -28,14 +35,15 @@ def main():
 				filepath = os.path.join(root, filename)
 				savedir = "Results_%s" % filepath[:filepath.rfind(".")]
 				print("Now working on %s" % filepath)
-				compute_scores(filepath, savedir,randomization)
+				write_kinase_and_peptide_scores(filepath, savedir)
+				permutation_test(filepath,savedir,num_iterations)
 	else:
 		print("SysPhos could not find file or directory")
 
 
-def compute_scores(infile,outdir,randomization):
+def write_kinase_and_peptide_scores(infile,outdir):
 	if(not os.path.exists(outdir)): os.makedirs(outdir)
-	seq_conv = seq.SeqConvert(infile,randomization)
+	seq_conv = seq.SeqConvert(infile,False)
 	netphorest_frame = seq_conv.get_trimmed_netphorest_frame()
 	
 	print("\tCalculating Scores")
@@ -49,7 +57,7 @@ def compute_scores(infile,outdir,randomization):
 
 		#print("\t\tKinase Outfile: %s\tPeptide Outfile: %s\t" % (kinase_outfile,peptide_outfile))
 
-		kinase_scores,peptide_power_scores = get_scores(netphorest_frame,schema[1])
+		kinase_scores,peptide_power_scores = compute_kinase_and_peptide_scores(netphorest_frame,schema[1])
 		sorted_scores = sorted(kinase_scores.items(),key=operator.itemgetter(1))
 		
 		for kinase, peptide_power_dict in peptide_power_scores.iteritems():
@@ -75,7 +83,7 @@ def compute_scores(infile,outdir,randomization):
 #Parameters: scoring_scemas - list of tuples, where each tuple contains
 #	1) Schema Name
 #	2) Function that takes confidence, significance, and fold-change as parameters and gives score as result
-def get_scores(netphorest_frame,schema):
+def compute_kinase_and_peptide_scores(netphorest_frame,schema):
 	kinase_scores = {}
 	peptide_power_scores = {}
 
@@ -93,6 +101,21 @@ def get_scores(netphorest_frame,schema):
 		peptide_power_scores[prediction] = peptide_power_dict
 
 	return kinase_scores, peptide_power_scores
+
+def compute_kinase_scores(netphorest_frame,schema):
+	kinase_scores = {}
+	
+	for row in netphorest_frame.iterrows():
+		peptide_num = int(row[0])
+		curr_series = row[1]
+		curr_score = schema(curr_series['pval'], curr_series['fc'], curr_series['Posterior'])
+		prediction = curr_series['Prediction']
+		kinase_scores[prediction] = (kinase_scores[prediction] if prediction in kinase_scores else 0) + curr_score
+
+	return kinase_scores
+
+def permutation_test(infile,outdir,num_iterations):
+	return "To be implemented"
 
 def list_all_schemas():
 	return [("Sig_Conf", lambda s,fc,c : c / s),
