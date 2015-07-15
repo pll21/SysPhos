@@ -88,12 +88,17 @@ def write_kinase_scores(infile,outdir):
 
 			kinase_writer.write("%s\t%s\n" % (kinase_prediction,kinase_score))
 
+	clean.clean_all(outdir)
+
 
 def permutation_test(infile,outdir,num_iterations):
 	for x in xrange(0,num_iterations):
 		print("Working on permutation #%s" % str(x))
-		#write_kinase_scores(infile, outdir + str(x))
 		write_kinase_scores(infile,"%s/Permutation%s" % (outdir,str(x)))
+	merge_permutations(outdir, num_iterations)
+
+def merge_permutations(outdir,num_iterations):
+	return "To be implemented"
 
 #Returns a dictionary containing the scores for each peptide
 #Parameters: infile - file with list of peptides with significance and fold-change values
