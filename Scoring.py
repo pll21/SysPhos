@@ -12,7 +12,6 @@ import fnmatch
 #./Scoring.py Validation/459_Valid_HuangPKA/ValData33noise.txt Results_Folder
 
 def main():
-	
 
 	data_location = sys.argv[1]
 
