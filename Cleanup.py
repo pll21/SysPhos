@@ -5,3 +5,7 @@ import shutil
 def clean_all(outdir):
 	os.rename(".sequences.fasta", "%s/sequences.fasta" % outdir)
 	os.remove(".NetPhorest_Predictions.txt")
+
+def clean_directories(directories):
+	for directory in directories:
+		shutil.rmtree(directory)

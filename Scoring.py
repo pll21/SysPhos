@@ -95,27 +95,35 @@ def permutation_test(infile,outdir,num_iterations):
 	for x in xrange(0,num_iterations):
 		print("Working on permutation #%s" % str(x))
 		write_kinase_scores(infile,"%s/Permutation%s" % (outdir,str(x)))
-	merge_permutations(outdir, num_iterations)
+	merge_permutations(outdir)
 
-def merge_permutations(outdir,num_iterations):
+def merge_permutations(outdir):
 	#Get list of directories in outdir that start with Permutation
+	permutation_directories = [x[0] for x in os.walk(outdir) if x[0][x[0].rfind("/") + 1:].startswith("Permutation")]
 	#Get list of text file names in the first Permutation directory
+	text_file_names = [y for y in [x[2] for x in os.walk(outdir)][1] if y.endswith(".txt")]
 	#Create dictionary that maps text file name to a dictionary mapping kinase names to scores
-
-	#For each Permutation directory
-	#	For each .txt file
-	#		score_dict = text_file_dict[text_file_name]
-	#		open text file
-	#		for each kinase in the text file
-	#			score_dict[kinase_name] = kinase_score + (score_dict[kinase_name] if kinase_name in score_dict else 0)
-	#		text_file_dict[text_file_name] = score_dict
-
+	text_file_dict = {file_name : {} for file_name in text_file_names}
+	for perm_dir in permutation_directories:
+		for text_file_name in text_file_names:
+			score_dict = text_file_dict[text_file_name]
+			reader = open("%s/%s" % (perm_dir,text_file_name),"rb")
+			for line in reader.readlines():
+				kinase_name,kinase_score = tuple(line.strip().split("\t"))
+				score_dict[kinase_name] = float(kinase_score) + (float(score_dict[kinase_name]) if kinase_name in score_dict else 0)
+			text_file_dict[text_file_name] = score_dict
+			reader.close()
 	#For each entry in text_file_dict
-	#	Divide each kinase score by len(permutation_lists)
-	#	Write results to text_file_name.txt in directory Permutation_Results
-	#Delete all Permutation_directories except Permutation_Results
-
-	return "To be implemented"
+	results_dir = "%s/Permutation_Results" % outdir
+	if(not os.path.exists(results_dir)): os.makedirs(results_dir)
+	for filename, score_dict in text_file_dict.iteritems():
+		for kinase_name,kinase_score in score_dict.iteritems():
+			score_dict[kinase_name] /= len(permutation_directories)
+		kinase_scores = sorted(score_dict.items(),key=operator.itemgetter(1))
+		writer = open("%s/Permutation_Results/%s" % (outdir,filename),'wb')
+		for kinase_tuple in kinase_scores:
+			writer.write("%s\t%s\n" % (kinase_tuple[0],kinase_tuple[1]))
+	clean.clean_directories(permutation_directories)
 
 #Returns a dictionary containing the scores for each peptide
 #Parameters: infile - file with list of peptides with significance and fold-change values
