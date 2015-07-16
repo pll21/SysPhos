@@ -98,6 +98,23 @@ def permutation_test(infile,outdir,num_iterations):
 	merge_permutations(outdir, num_iterations)
 
 def merge_permutations(outdir,num_iterations):
+	#Get list of directories in outdir that start with Permutation
+	#Get list of text file names in the first Permutation directory
+	#Create dictionary that maps text file name to a dictionary mapping kinase names to scores
+
+	#For each Permutation directory
+	#	For each .txt file
+	#		score_dict = text_file_dict[text_file_name]
+	#		open text file
+	#		for each kinase in the text file
+	#			score_dict[kinase_name] = kinase_score + (score_dict[kinase_name] if kinase_name in score_dict else 0)
+	#		text_file_dict[text_file_name] = score_dict
+
+	#For each entry in text_file_dict
+	#	Divide each kinase score by len(permutation_lists)
+	#	Write results to text_file_name.txt in directory Permutation_Results
+	#Delete all Permutation_directories except Permutation_Results
+
 	return "To be implemented"
 
 #Returns a dictionary containing the scores for each peptide
