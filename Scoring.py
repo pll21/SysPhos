@@ -7,6 +7,7 @@ import operator
 import math
 import os
 import fnmatch
+from multiprocessing import Lock, Process, Queue, current_process
 
 #./Scoring.py Validation
 #./Scoring.py Validation/459_Valid_HuangPKA/ValData33noise.txt Results_Folder
@@ -44,15 +45,12 @@ def write_kinase_and_peptide_scores(infile,outdir):
 	netphorest_frame = seq_conv.get_trimmed_netphorest_frame()
 	
 	print("\tCalculating Scores")
-	#print("\t\tOutdirectory: %s" % outdir)
 	for schema in list_all_schemas():
 		kinase_outfile = "%s/kinase_scores_%s.txt" % (outdir,schema[0])
 		kinase_writer = open(kinase_outfile,'wb')
 
 		peptide_outfile = "%s/peptide_scores_%s.txt" % (outdir,schema[0])
 		peptide_writer = open(peptide_outfile,'wb')
-
-		#print("\t\tKinase Outfile: %s\tPeptide Outfile: %s\t" % (kinase_outfile,peptide_outfile))
 
 		kinase_scores,peptide_power_scores = compute_kinase_and_peptide_scores(netphorest_frame,schema[1])
 		sorted_scores = sorted(kinase_scores.items(),key=operator.itemgetter(1))
@@ -97,10 +95,43 @@ def write_kinase_scores(infile,outdir):
 
 def permutation_test(infile,outdir,num_iterations):
 	print("Now performing permutation testing")
-	for x in xrange(0,num_iterations):
+	workers = 2
+	work_queue = Queue()
+	done_queue = Queue()
+	processes = []
+
+	for perm_number in xrange(0,num_iterations):
+		work_queue.put(perm_number)
+
+	for w in xrange(workers):
+		p = Process(target=worker, args=(infile,outdir,work_queue, done_queue))
+		p.start()
+		processes.append(p)
+		work_queue.put('STOP')
+
+	for p in processes:
+		p.join()
+
+
+	done_queue.put('STOP')
+
+	"""for x in xrange(0,num_iterations):
 		print("Working on permutation #%s" % str(x))
+
 		write_kinase_scores(infile,"%s/Permutation%s" % (outdir,str(x)))
-	merge_permutations(outdir)
+	"""
+	#merge_permutations(outdir)
+
+def worker(infile,outdir,work_queue,done_queue):
+	try:
+		for perm_num in iter(work_queue.get,'STOP'):
+			write_kinase_scores(infile,"%s/Permutation%s" % (outdir,str(perm_num)))
+			done_queue.put("Success: %s" % str(perm_num))
+	except Exception, e:
+		done_queue.put("Failure: %s" % str(perm_num))
+	return True
+
+
 
 def merge_permutations(outdir):
 	#Get list of directories in outdir that start with Permutation
@@ -127,7 +158,7 @@ def merge_permutations(outdir):
 	for filename, score_dict in text_file_dict.iteritems():
 		writer = open("%s/Permutation_Results/%s" % (outdir,filename),'wb')
 		for kinase_name,kinase_scores in score_dict.iteritems():
-			writer.write("%s%s\n" % (kinase_name,"\t" + "\t".join(score_list)))
+			writer.write("%s%s\n" % (kinase_name,"\t" + "\t".join(kinase_scores)))
 	clean.clean_directories(permutation_directories)
 
 #Returns a dictionary containing the scores for each peptide
