@@ -9,3 +9,7 @@ def clean_all(outdir):
 def clean_directories(directories):
 	for directory in directories:
 		shutil.rmtree(directory)
+
+def clean_existing(data_location):
+	if(os.path.isdir(data_location)):
+		shutil.rmtree(data_location)
