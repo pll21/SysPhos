@@ -8,15 +8,26 @@ import math
 import os
 import fnmatch
 from multiprocessing import Lock, Process, Queue, current_process
+import argparse
 
 #./Scoring.py Validation
 #./Scoring.py Validation/459_Valid_HuangPKA/ValData33noise.txt Results_Folder
 
 def main():
 
-	data_location = sys.argv[1]
-	num_iterations = (int(sys.argv[2]) if len(sys.argv) > 2 else 0)
+	parser = argparse.ArgumentParser(description='A phosphoproteome-wide kinase inference algorithm.')
+	parser.add_argument('data_location', metavar='d', type=str,help='The filename or directory name where the data is stored.')
+	parser.add_argument('--permutations',type=int,help='The number of permutations to run.')
 
+	args = parser.parse_args()
+
+	data_location = args.data_location
+	num_iterations = args.permutations if args.permutations else 0
+
+	print(data_location)
+	print(num_iterations)
+
+	"""
 	#Handle file case
 	if(os.path.isfile(data_location)):
 		print("Now working on %s" % data_location)
@@ -37,6 +48,7 @@ def main():
 				permutation_test(filepath,savedir,num_iterations)
 	else:
 		print("SysPhos could not find file or directory")
+	"""
 
 
 def write_kinase_and_peptide_scores(infile,outdir):
@@ -95,7 +107,7 @@ def write_kinase_scores(infile,outdir):
 
 def permutation_test(infile,outdir,num_iterations):
 	print("Now performing permutation testing")
-	workers = 2
+	workers = 5
 	work_queue = Queue()
 	done_queue = Queue()
 	processes = []
