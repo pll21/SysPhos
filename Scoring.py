@@ -24,10 +24,7 @@ def main():
 	data_location = args.data_location
 	num_iterations = args.permutations if args.permutations else 0
 
-	print(data_location)
-	print(num_iterations)
 
-	"""
 	#Handle file case
 	if(os.path.isfile(data_location)):
 		print("Now working on %s" % data_location)
@@ -48,7 +45,6 @@ def main():
 				permutation_test(filepath,savedir,num_iterations)
 	else:
 		print("SysPhos could not find file or directory")
-	"""
 
 
 def write_kinase_and_peptide_scores(infile,outdir):
