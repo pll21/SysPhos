@@ -89,9 +89,11 @@ def write_peptide_scores(savedir,netphorest_frame):
 
 
 def write_permutation_scores(savedir,netphorest_frame,num_iterations):
+	print("\tWorking on Permutations")
 	for schema in list_all_schemas():
 		kinase_data = []
 		for iteration in xrange(0,num_iterations):
+			print("\t\tSchema: %s, Iteration: %s" % (schema[0],str(iteration)))
 			kinase_scores = compute_kinase_scores(randomize_frame(netphorest_frame),schema[1])
 			kinase_data.append(pd.Series([float(score) for score in kinase_scores.values()], index=kinase_scores.keys(),name="Permutation# %s" % str(iteration)))
 		kinase_dataframe = pd.concat(kinase_data,axis=1,keys=[s.name for s in kinase_data])
