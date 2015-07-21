@@ -9,6 +9,8 @@ import os
 import fnmatch
 from multiprocessing import Lock, Process, Queue, current_process
 import argparse
+import pandas as pd
+import random
 
 #./Scoring.py Validation
 #./Scoring.py Validation/459_Valid_HuangPKA/ValData33noise.txt Results_Folder
@@ -40,161 +42,69 @@ def generate_all_results(data_location,num_iterations):
 	print("Now working on %s" % data_location)
 	savedir = "Results_%s/" % data_location[:data_location.rfind(".")]
 	clean.clean_existing(savedir)
-	write_kinase_and_peptide_scores(data_location,savedir)
-	permutation_test(data_location,savedir,num_iterations)
-	
+	os.makedirs(savedir)
 
-
-def write_kinase_and_peptide_scores(infile,outdir):
-	if(not os.path.exists(outdir)): os.makedirs(outdir)
-	seq_conv = seq.SeqConvert(infile,False)
+	seq_conv = seq.SeqConvert(data_location)
 	netphorest_frame = seq_conv.get_trimmed_netphorest_frame()
-	
-	print("\tCalculating Scores")
+
+	write_kinase_scores(savedir,netphorest_frame)
+	write_peptide_scores(savedir,netphorest_frame)
+	write_permutation_scores(savedir,netphorest_frame,num_iterations)
+	clean.clean_all(savedir)
+
+
+def write_kinase_scores(savedir,netphorest_frame):
+	print("\tCalculating Kinase Scores")
 	for schema in list_all_schemas():
-		kinase_outfile = "%s/kinase_scores_%s.txt" % (outdir,schema[0])
-		kinase_writer = open(kinase_outfile,'wb')
-
-		peptide_outfile = "%s/peptide_scores_%s.txt" % (outdir,schema[0])
-		peptide_writer = open(peptide_outfile,'wb')
-
-		kinase_scores,peptide_power_scores = compute_kinase_and_peptide_scores(netphorest_frame,schema[1])
-		sorted_scores = sorted(kinase_scores.items(),key=operator.itemgetter(1))
-		
-		for kinase, peptide_power_dict in peptide_power_scores.iteritems():
-			peptide_power_scores[kinase] = sorted(peptide_power_dict.items(),key=operator.itemgetter(1))
-		
-		for score in sorted_scores:
-			kinase_prediction = str(score[0])
-			kinase_score = str(score[1])
-
-			kinase_writer.write("%s\t%s\n" % (kinase_prediction,kinase_score))
-			
-			peptide_writer.write("Peptide Powers for %s (Score: %s)\n" % (kinase_prediction,kinase_score))
-			for power_entry in peptide_power_scores[kinase_prediction]:
-				peptide_name = str(power_entry[0])
-				peptide_score = str(power_entry[1])
-				peptide_writer.write("\tPeptide: %s\tPower: %s\n" % (peptide_name,peptide_score))
-				
-	clean.clean_all(outdir)
-
-def write_kinase_scores(infile,outdir):
-	if(not os.path.exists(outdir)): os.makedirs(outdir)
-	seq_conv = seq.SeqConvert(infile,True)
-	netphorest_frame = seq_conv.get_trimmed_netphorest_frame()
-	print("\tCalculating Scores")
-	for schema in list_all_schemas():
-		kinase_outfile = "%s/kinase_scores_%s.txt" % (outdir,schema[0])
+		kinase_outfile = "%s/kinase_scores_%s.txt" % (savedir,schema[0])
 		kinase_writer = open(kinase_outfile,'wb')
 
 		kinase_scores = compute_kinase_scores(netphorest_frame,schema[1])
 		sorted_scores = sorted(kinase_scores.items(),key=operator.itemgetter(1))
-
 		for score in sorted_scores:
 			kinase_prediction = str(score[0])
 			kinase_score = str(score[1])
-
 			kinase_writer.write("%s\t%s\n" % (kinase_prediction,kinase_score))
+		kinase_writer.close()
 
-	clean.clean_all(outdir)
-
-
-def permutation_test(infile,outdir,num_iterations):
-	print("Now performing permutation testing")
-	if(not os.path.exists(outdir)): os.makedirs(outdir)
-	seq_conv = seq.SeqConvert(infile,True)
-	netphorest_frame = seq_conv.get_trimmed_netphorest_frame()
-
-	#workers = 5
-	#work_queue = Queue()
-	#done_queue = Queue()
-	#processes = []
-
-	#for perm_number in xrange(0,num_iterations):
-	#	work_queue.put(perm_number)
-
-	#for w in xrange(workers):
-	#	p = Process(target=worker, args=(infile,outdir,work_queue, done_queue))
-	#	p.start()
-	#	processes.append(p)
-	#	work_queue.put('STOP')
-
-	#for p in processes:
-	#	p.join()
+def write_peptide_scores(savedir,netphorest_frame):
+	print("\tCalculating Peptide Scores")
+	for schema in list_all_schemas():
+		peptide_outfile = "%s/peptide_scores_%s.txt" % (savedir,schema[0])
+		peptide_writer = open(peptide_outfile,'wb')
+		peptide_scores = compute_peptide_scores(netphorest_frame,schema[1])
+		sorted_scores = sorted(peptide_scores.items(),key=lambda item: sum(float(peptide) for peptide in item[1].values()))
+		for entry in sorted_scores:
+			kinase_prediction = str(entry[0])
+			kinase_score = str(sum(float(x) for x in entry[1].values()))
+			peptide_writer.write("Peptide Scores for %s (Score: %s)\n" % (kinase_prediction,kinase_score))
+			for peptide_entry in entry[1].items():
+				peptide_writer.write("Peptide: %s\t Score: %s\n" % (peptide_entry[0],peptide_entry[1]))
+		peptide_writer.close()
 
 
-	#done_queue.put('STOP')
+def write_permutation_scores(savedir,netphorest_frame,num_iterations):
+	for schema in list_all_schemas():
+		kinase_data = []
+		for iteration in xrange(0,num_iterations):
+			kinase_scores = compute_kinase_scores(randomize_frame(netphorest_frame),schema[1])
+			#kinase_scores = compute_kinase_scores(netphorest_frame,schema[1])
+			kinase_data.append(pd.Series([float(score) for score in kinase_scores.values()], index=kinase_scores.keys(),name="Permutation# %s" % str(iteration)))
+		kinase_dataframe = pd.concat(kinase_data,axis=1,keys=[s.name for s in kinase_data])
+		kinase_dataframe.to_csv("%s/Permutated_%s.txt" % (savedir,schema[0]), sep="\t")
 
-	for x in xrange(0,num_iterations):
-		print("Working on permutation #%s" % str(x))
+def randomize_frame(dataframe):
+		pvals = list(dataframe['pval'])
+		fc = list(dataframe['fc'])
 
-		write_kinase_scores(infile,"%s/Permutation%s" % (outdir,str(x)))
-	if(num_iterations > 0):
-		merge_permutations(outdir)
+		combined = zip(pvals, fc)
+		random.shuffle(combined)
+		pvals[:], fc[:] = zip(*combined)
 
-def worker(infile,outdir,work_queue,done_queue):
-	try:
-		for perm_num in iter(work_queue.get,'STOP'):
-			write_kinase_scores(infile,"%s/Permutation%s" % (outdir,str(perm_num)))
-			done_queue.put("Success: %s" % str(perm_num))
-	except Exception, e:
-		done_queue.put("Failure: %s" % str(perm_num))
-	return True
-
-
-
-def merge_permutations(outdir):
-	#Get list of directories in outdir that start with Permutation
-	permutation_directories = [x[0] for x in os.walk(outdir) if x[0][x[0].rfind("/") + 1:].startswith("Permutation")]
-	#Get list of text file names in the first Permutation directory
-	text_file_names = [y for y in [x[2] for x in os.walk(outdir)][1] if y.endswith(".txt")]
-	#Create dictionary that maps text file name to a dictionary mapping kinase names to scores
-	text_file_dict = {file_name : {} for file_name in text_file_names}
-	for perm_dir in permutation_directories:
-		for text_file_name in text_file_names:
-			score_dict = text_file_dict[text_file_name]
-			reader = open("%s/%s" % (perm_dir,text_file_name),"rb")
-			for line in reader.readlines():
-				kinase_name,kinase_score = tuple(line.strip().split("\t"))
-				if(kinase_name in score_dict):
-					score_dict[kinase_name].append(kinase_score)
-				else:
-					score_dict[kinase_name] = [kinase_score]
-			text_file_dict[text_file_name] = score_dict
-			reader.close()
-	#For each entry in text_file_dict
-	results_dir = "%s/Permutation_Results" % outdir
-	if(not os.path.exists(results_dir)): os.makedirs(results_dir)
-	for filename, score_dict in text_file_dict.iteritems():
-		writer = open("%s/Permutation_Results/%s" % (outdir,filename),'wb')
-		for kinase_name,kinase_scores in score_dict.iteritems():
-			writer.write("%s%s\n" % (kinase_name,"\t" + "\t".join(kinase_scores)))
-	clean.clean_directories(permutation_directories)
-
-#Returns a dictionary containing the scores for each peptide
-#Parameters: infile - file with list of peptides with significance and fold-change values
-#Parameters: outdir - directory to save results to
-#Parameters: scoring_scemas - list of tuples, where each tuple contains
-#	1) Schema Name
-#	2) Function that takes confidence, significance, and fold-change as parameters and gives score as result
-def compute_kinase_and_peptide_scores(netphorest_frame,schema):
-	kinase_scores = {}
-	peptide_power_scores = {}
-
-	for row in netphorest_frame.iterrows():
-		peptide_num = int(row[0])
-		curr_series = row[1]
-
-		curr_score = schema(curr_series['pval'], curr_series['fc'], curr_series['Posterior'])
-		prediction = curr_series['Prediction']
-		
-		kinase_scores[prediction] = (kinase_scores[prediction] if prediction in kinase_scores else 0) + curr_score
-		
-		peptide_power_dict = (peptide_power_scores[prediction] if prediction in peptide_power_scores else {})
-		peptide_power_dict[peptide_num] = (peptide_power_dict[peptide_num] if peptide_num in peptide_power_dict else 0) + curr_score
-		peptide_power_scores[prediction] = peptide_power_dict
-
-	return kinase_scores, peptide_power_scores
+		df = dataframe.copy()
+		df['pval'] = pvals
+		df['fc'] = fc
+		return df
 
 def compute_kinase_scores(netphorest_frame,schema):
 	kinase_scores = {}
@@ -207,6 +117,22 @@ def compute_kinase_scores(netphorest_frame,schema):
 		kinase_scores[prediction] = (kinase_scores[prediction] if prediction in kinase_scores else 0) + curr_score
 
 	return kinase_scores
+
+def compute_peptide_scores(netphorest_frame,schema):
+	peptide_power_scores = {}
+
+	for row in netphorest_frame.iterrows():
+		peptide_num = int(row[0])
+		curr_series = row[1]
+
+		curr_score = schema(curr_series['pval'], curr_series['fc'], curr_series['Posterior'])
+		prediction = curr_series['Prediction']
+		peptide_power_dict = (peptide_power_scores[prediction] if prediction in peptide_power_scores else {})
+		peptide_power_dict[peptide_num] = (peptide_power_dict[peptide_num] if peptide_num in peptide_power_dict else 0) + curr_score
+		peptide_power_scores[prediction] = peptide_power_dict
+
+	return peptide_power_scores
+
 
 def list_all_schemas():
 	return [("Sig_Conf", lambda s,fc,c : c / s),
