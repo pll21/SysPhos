@@ -27,24 +27,22 @@ def main():
 
 	#Handle file case
 	if(os.path.isfile(data_location)):
-		print("Now working on %s" % data_location)
-		savedir = "Results_%s" % data_location
-		clean.clean_existing(savedir[:savedir.find("/")])
-		savedir = savedir[:savedir.rfind(".txt")]
-		write_kinase_and_peptide_scores(data_location, savedir)
-		permutation_test(data_location,savedir,num_iterations)
+		generate_all_results(data_location,num_iterations)
 	#Handle directory case
 	elif(os.path.isdir(data_location)):
 		for root, dirnames, filenames in os.walk(data_location):
 			for filename in fnmatch.filter(filenames, '*.txt'):
-				filepath = os.path.join(root, filename)
-				savedir = "Results_%s" % filepath[:filepath.rfind(".")]
-				clean.clean_existing(savedir[:savedir.find("/")])
-				print("Now working on %s" % filepath)
-				write_kinase_and_peptide_scores(filepath, savedir)
-				permutation_test(filepath,savedir,num_iterations)
+				generate_all_results(os.path.join(root,filename),num_iterations)
 	else:
 		print("SysPhos could not find file or directory")
+
+def generate_all_results(data_location,num_iterations):
+	print("Now working on %s" % data_location)
+	savedir = "Results_%s/" % data_location[:data_location.rfind(".")]
+	clean.clean_existing(savedir)
+	write_kinase_and_peptide_scores(data_location,savedir)
+	permutation_test(data_location,savedir,num_iterations)
+	
 
 
 def write_kinase_and_peptide_scores(infile,outdir):
@@ -103,32 +101,36 @@ def write_kinase_scores(infile,outdir):
 
 def permutation_test(infile,outdir,num_iterations):
 	print("Now performing permutation testing")
-	workers = 5
-	work_queue = Queue()
-	done_queue = Queue()
-	processes = []
+	if(not os.path.exists(outdir)): os.makedirs(outdir)
+	seq_conv = seq.SeqConvert(infile,True)
+	netphorest_frame = seq_conv.get_trimmed_netphorest_frame()
 
-	for perm_number in xrange(0,num_iterations):
-		work_queue.put(perm_number)
+	#workers = 5
+	#work_queue = Queue()
+	#done_queue = Queue()
+	#processes = []
 
-	for w in xrange(workers):
-		p = Process(target=worker, args=(infile,outdir,work_queue, done_queue))
-		p.start()
-		processes.append(p)
-		work_queue.put('STOP')
+	#for perm_number in xrange(0,num_iterations):
+	#	work_queue.put(perm_number)
 
-	for p in processes:
-		p.join()
+	#for w in xrange(workers):
+	#	p = Process(target=worker, args=(infile,outdir,work_queue, done_queue))
+	#	p.start()
+	#	processes.append(p)
+	#	work_queue.put('STOP')
+
+	#for p in processes:
+	#	p.join()
 
 
-	done_queue.put('STOP')
+	#done_queue.put('STOP')
 
-	"""for x in xrange(0,num_iterations):
+	for x in xrange(0,num_iterations):
 		print("Working on permutation #%s" % str(x))
 
 		write_kinase_scores(infile,"%s/Permutation%s" % (outdir,str(x)))
-	"""
-	#merge_permutations(outdir)
+	if(num_iterations > 0):
+		merge_permutations(outdir)
 
 def worker(infile,outdir,work_queue,done_queue):
 	try:

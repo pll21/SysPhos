@@ -81,7 +81,7 @@ class SeqConvert:
 		df = df.rename(index=renamed_index)
 		df['sites'] = sites
 
-		if(self.randomization): df = self.randomize_sequence_weights(df)
+		#if(self.randomization): df = self.randomize_sequence_weights(df)
 		return df
 
 	def randomize_sequence_weights(self, dataframe):
