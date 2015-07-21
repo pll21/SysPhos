@@ -7,7 +7,6 @@ import operator
 import math
 import os
 import fnmatch
-from multiprocessing import Lock, Process, Queue, current_process
 import argparse
 import pandas as pd
 import random
@@ -26,7 +25,6 @@ def main():
 	data_location = args.data_location
 	num_iterations = args.permutations if args.permutations else 0
 
-
 	#Handle file case
 	if(os.path.isfile(data_location)):
 		generate_all_results(data_location,num_iterations)
@@ -41,22 +39,29 @@ def main():
 def generate_all_results(data_location,num_iterations):
 	print("Now working on %s" % data_location)
 	savedir = "Results_%s/" % data_location[:data_location.rfind(".")]
+	kinase_dir = savedir + "Kinase_Scores/"
+	peptide_dir = savedir + "Peptide_Scores/"
+	permutation_dir = savedir + "Permutation_Scores"
+
 	clean.clean_existing(savedir)
 	os.makedirs(savedir)
+	os.makedirs(kinase_dir)
+	os.makedirs(peptide_dir)
+	os.makedirs(permutation_dir)
 
 	seq_conv = seq.SeqConvert(data_location)
 	netphorest_frame = seq_conv.get_trimmed_netphorest_frame()
 
-	write_kinase_scores(savedir,netphorest_frame)
-	write_peptide_scores(savedir,netphorest_frame)
-	write_permutation_scores(savedir,netphorest_frame,num_iterations)
+	write_kinase_scores(kinase_dir,netphorest_frame)
+	write_peptide_scores(peptide_dir,netphorest_frame)
+	write_permutation_scores(permutation_dir,netphorest_frame,num_iterations)
 	clean.clean_all(savedir)
 
 
 def write_kinase_scores(savedir,netphorest_frame):
 	print("\tCalculating Kinase Scores")
 	for schema in list_all_schemas():
-		kinase_outfile = "%s/kinase_scores_%s.txt" % (savedir,schema[0])
+		kinase_outfile = "%s/Kinase_scores_%s.txt" % (savedir,schema[0])
 		kinase_writer = open(kinase_outfile,'wb')
 
 		kinase_scores = compute_kinase_scores(netphorest_frame,schema[1])
@@ -70,7 +75,7 @@ def write_kinase_scores(savedir,netphorest_frame):
 def write_peptide_scores(savedir,netphorest_frame):
 	print("\tCalculating Peptide Scores")
 	for schema in list_all_schemas():
-		peptide_outfile = "%s/peptide_scores_%s.txt" % (savedir,schema[0])
+		peptide_outfile = "%s/Peptide_scores_%s.txt" % (savedir,schema[0])
 		peptide_writer = open(peptide_outfile,'wb')
 		peptide_scores = compute_peptide_scores(netphorest_frame,schema[1])
 		sorted_scores = sorted(peptide_scores.items(),key=lambda item: sum(float(peptide) for peptide in item[1].values()))
@@ -88,7 +93,6 @@ def write_permutation_scores(savedir,netphorest_frame,num_iterations):
 		kinase_data = []
 		for iteration in xrange(0,num_iterations):
 			kinase_scores = compute_kinase_scores(randomize_frame(netphorest_frame),schema[1])
-			#kinase_scores = compute_kinase_scores(netphorest_frame,schema[1])
 			kinase_data.append(pd.Series([float(score) for score in kinase_scores.values()], index=kinase_scores.keys(),name="Permutation# %s" % str(iteration)))
 		kinase_dataframe = pd.concat(kinase_data,axis=1,keys=[s.name for s in kinase_data])
 		kinase_dataframe.to_csv("%s/Permutated_%s.txt" % (savedir,schema[0]), sep="\t")
@@ -139,7 +143,11 @@ def list_all_schemas():
 			("Fold_Conf", lambda s,fc,c : math.fabs(fc) * c),
 			("Sig_Fold_Conf", lambda s,fc,c : math.fabs(fc) * c / s),
 			("Fold_Conf_Preserve_Sign", lambda s,fc,c : fc * c),
-			("Sig_Fold_Conf_Preserve_Sign", lambda s,fc,c : fc * c / s)]
+			("Sig_Fold_Conf_Preserve_Sign", lambda s,fc,c : fc * c / s),
+			
+			("Sig_Conf_Threshold", lambda s,fc,c : (c / s if s < .05 else 0.0)),
+			("Sig_Fold_Conf_Threshold", lambda s,fc,c : (math.fabs(fc) * c / s if s < .05 else 0.0)),
+			("Sig_Fold_Conf_Preserve_Sign_Threshold", lambda s,fc,c : (fc * c / s if s < .05 else 0.0))]
 
 if __name__ == '__main__':
 	main()
