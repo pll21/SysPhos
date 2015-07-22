@@ -6,8 +6,9 @@ import numpy as np
 
 class SeqConvert:
 
-	def __init__(self,filename):
+	def __init__(self,filename,threshold=1.0):
 		self.filename = filename
+		self.threshold = threshold
 
 	def get_trimmed_netphorest_frame(self):
 		all_series = list()
@@ -78,6 +79,8 @@ class SeqConvert:
 
 		df = df.rename(index=renamed_index)
 		df['sites'] = sites
+
+		df = df.drop(labels=[label for label in df.index if float(df.ix[label]['pval']) > self.threshold])
 
 		return df
 

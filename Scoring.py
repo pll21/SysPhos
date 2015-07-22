@@ -19,7 +19,9 @@ def main():
 	parser = argparse.ArgumentParser(description='A phosphoproteome-wide kinase inference algorithm.')
 	parser.add_argument('data_location', metavar='d', type=str,help='The filename or directory name where the data is stored.')
 	parser.add_argument('--permutations',type=int,help='The number of permutations to run.')
+	parser.add_argument('--threshold',type=float,help='What p-value to threshold at.')
 
+	parser.set_defaults(threshold=1.0)
 	args = parser.parse_args()
 
 	data_location = args.data_location
@@ -27,16 +29,16 @@ def main():
 
 	#Handle file case
 	if(os.path.isfile(data_location)):
-		generate_all_results(data_location,num_iterations)
+		generate_all_results(data_location,num_iterations,args.threshold)
 	#Handle directory case
 	elif(os.path.isdir(data_location)):
 		for root, dirnames, filenames in os.walk(data_location):
 			for filename in fnmatch.filter(filenames, '*.txt'):
-				generate_all_results(os.path.join(root,filename),num_iterations)
+				generate_all_results(os.path.join(root,filename),num_iterations,args.threshold)
 	else:
 		print("SysPhos could not find file or directory")
 
-def generate_all_results(data_location,num_iterations):
+def generate_all_results(data_location,num_iterations,threshold):
 	print("Now working on %s" % data_location)
 	savedir = "Results_%s/" % data_location[:data_location.rfind(".")]
 	kinase_dir = savedir + "Kinase_Scores/"
@@ -49,12 +51,13 @@ def generate_all_results(data_location,num_iterations):
 	os.makedirs(peptide_dir)
 	os.makedirs(permutation_dir)
 
-	seq_conv = seq.SeqConvert(data_location)
+	seq_conv = seq.SeqConvert(data_location,threshold=threshold)
 	netphorest_frame = seq_conv.get_trimmed_netphorest_frame()
 
 	write_kinase_scores(kinase_dir,netphorest_frame)
 	write_peptide_scores(peptide_dir,netphorest_frame)
-	write_permutation_scores(permutation_dir,netphorest_frame,num_iterations)
+	if(num_iterations > 0):
+		write_permutation_scores(permutation_dir,netphorest_frame,num_iterations)
 	clean.clean_all(savedir)
 
 
@@ -145,11 +148,7 @@ def list_all_schemas():
 			("Fold_Conf", lambda s,fc,c : math.fabs(fc) * c),
 			("Sig_Fold_Conf", lambda s,fc,c : math.fabs(fc) * c / s),
 			("Fold_Conf_Preserve_Sign", lambda s,fc,c : fc * c),
-			("Sig_Fold_Conf_Preserve_Sign", lambda s,fc,c : fc * c / s),
-			
-			("Sig_Conf_Threshold", lambda s,fc,c : (c / s if s < .05 else 0.0)),
-			("Sig_Fold_Conf_Threshold", lambda s,fc,c : (math.fabs(fc) * c / s if s < .05 else 0.0)),
-			("Sig_Fold_Conf_Preserve_Sign_Threshold", lambda s,fc,c : (fc * c / s if s < .05 else 0.0))]
+			("Sig_Fold_Conf_Preserve_Sign", lambda s,fc,c : fc * c / s)]
 
 if __name__ == '__main__':
 	main()
