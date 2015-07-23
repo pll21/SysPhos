@@ -86,8 +86,10 @@ def write_peptide_scores(savedir,netphorest_frame):
 			kinase_prediction = str(entry[0])
 			kinase_score = str(sum(float(x) for x in entry[1].values()))
 			peptide_writer.write("Peptide Scores for %s (Score: %s)\n" % (kinase_prediction,kinase_score))
-			for peptide_entry in entry[1].items():
-				peptide_writer.write("Peptide: %s\t Score: %s\n" % (peptide_entry[0],peptide_entry[1]))
+
+			peptide_entries = sorted(entry[1].items(),key=lambda item: item[1])
+			for peptide_entry in peptide_entries:
+				peptide_writer.write("\tPeptide: %s\t Score: %s\n" % (peptide_entry[0],peptide_entry[1]))
 		peptide_writer.close()
 
 
@@ -119,7 +121,6 @@ def compute_kinase_scores(netphorest_frame,schema):
 	kinase_scores = {}
 	
 	for row in netphorest_frame.iterrows():
-		peptide_num = int(row[0])
 		curr_series = row[1]
 		curr_score = schema(curr_series['pval'], curr_series['fc'], curr_series['Posterior'])
 		prediction = curr_series['Prediction']
@@ -131,13 +132,13 @@ def compute_peptide_scores(netphorest_frame,schema):
 	peptide_power_scores = {}
 
 	for row in netphorest_frame.iterrows():
-		peptide_num = int(row[0])
+		peptide_sequence = row[0]
 		curr_series = row[1]
 
 		curr_score = schema(curr_series['pval'], curr_series['fc'], curr_series['Posterior'])
 		prediction = curr_series['Prediction']
 		peptide_power_dict = (peptide_power_scores[prediction] if prediction in peptide_power_scores else {})
-		peptide_power_dict[peptide_num] = (peptide_power_dict[peptide_num] if peptide_num in peptide_power_dict else 0) + curr_score
+		peptide_power_dict[peptide_sequence] = (peptide_power_dict[peptide_sequence] if peptide_sequence in peptide_power_dict else 0) + curr_score
 		peptide_power_scores[prediction] = peptide_power_dict
 
 	return peptide_power_scores

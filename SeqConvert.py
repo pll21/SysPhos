@@ -15,7 +15,7 @@ class SeqConvert:
 		netphorest_frame, sequence_frame = self.get_netphorest_frame()
 
 		print("\tTrimming NetPhorest DataFrame")
-		
+
 		for row in netphorest_frame.iterrows():
 			peptide_full_sequence = row[0]
 			peptide_info = sequence_frame.ix[peptide_full_sequence]
@@ -52,6 +52,7 @@ class SeqConvert:
 		df['stripped_sequence'] = sequences
 		df['sites'] = sites
 		df = df.groupby(df.index,sort=False).first()
+		df = df[df.pval <= self.threshold]
 		return df
 
 	def get_sequences_and_sites(self,sequence_frame):
@@ -85,10 +86,3 @@ class SeqConvert:
 			stripped_sequence = row[1]['stripped_sequence']
 			sequence_writer.write(">%s\n%s\n" % (sequence_with_site,stripped_sequence))
 		sequence_writer.close()
-		
-
-def test():
-	sq = SeqConvert("Testing_Data/test.txt")
-	print(sq.get_trimmed_netphorest_frame())
-
-test()
