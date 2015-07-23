@@ -48,11 +48,12 @@ class SeqConvert:
 	def get_sequence_frame(self):
 		print("\tGenerating Sequence DataFrame")
 		df = pd.DataFrame.from_csv(self.filename,sep=" ",index_col=-1)
+		df = df[df.pval <= self.threshold]
+		df = df[pd.notnull(df.index)]
 		sequences,sites = self.get_sequences_and_sites(df)
 		df['stripped_sequence'] = sequences
 		df['sites'] = sites
 		df = df.groupby(df.index,sort=False).first()
-		df = df[df.pval <= self.threshold]
 		return df
 
 	def get_sequences_and_sites(self,sequence_frame):
@@ -86,3 +87,6 @@ class SeqConvert:
 			stripped_sequence = row[1]['stripped_sequence']
 			sequence_writer.write(">%s\n%s\n" % (sequence_with_site,stripped_sequence))
 		sequence_writer.close()
+
+sq = SeqConvert("Testing_Data/test.txt")
+sq.get_sequence_frame()
