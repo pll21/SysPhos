@@ -29,12 +29,19 @@ def main():
 
 	#Handle file case
 	if(os.path.isfile(data_location)):
-		generate_all_results(data_location,num_iterations,args.threshold)
+		try:
+			generate_all_results(data_location,num_iterations,args.threshold)
+		except:
+			print("SysPhos encountered an error when processing %s" % data_location)
 	#Handle directory case
 	elif(os.path.isdir(data_location)):
 		for root, dirnames, filenames in os.walk(data_location):
 			for filename in fnmatch.filter(filenames, '*.txt'):
-				generate_all_results(os.path.join(root,filename),num_iterations,args.threshold)
+				full_filepath = os.path.join(root,filename)
+				try:
+					generate_all_results(full_filepath,num_iterations,args.threshold)
+				except:
+					print("SysPhos encountered an error when processing %s" % full_filepath)
 	else:
 		print("SysPhos could not find file or directory")
 
