@@ -49,7 +49,7 @@ def generate_results(data_location,num_iterations,threshold,debug_mode):
 		try:
 			write_results(data_location,num_iterations,threshold)
 		except:
-			print("SysPhos encountered an error when processing %s" % full_filepath)
+			print("SysPhos encountered an error when processing %s" % data_location)
 
 def write_results(data_location,num_iterations,threshold):
 	print("Now working on %s" % data_location)
@@ -103,14 +103,15 @@ def write_peptide_scores(savedir,netphorest_frame):
 
 			peptide_entries = sorted(entry[1].items(),key=lambda item: item[1])
 			for peptide_entry in peptide_entries:
-				peptide_writer.write("\tPeptide: %s\t Score: %s\t Peptide Significance: %s\t Peptide Fold-Change: %s\t Prediction Confidence: %s\n" 
-									%	(peptide_entry[0],
-										peptide_entry[1],
-										str(grouped_netphorest_frame.ix[peptide_entry[0]]['pval']),
-										str(grouped_netphorest_frame.ix[peptide_entry[0]]['fc'])),
-										str(netphorest_frame[netphorest_frame.index == peptide_entry[0]].loc[netphorest_frame['Prediction'] == kinase_prediction]['Posterior']))
-		peptide_writer.close()
+				peptide_sequence = peptide_entry[0]
+				peptide_score = peptide_entry[1]
+				significance = str(grouped_netphorest_frame.ix[peptide_sequence]['pval'])
+				fold_change = str(grouped_netphorest_frame.ix[peptide_sequence]['fc'])
+				confidence = str(list(netphorest_frame.loc[(netphorest_frame.index == peptide_sequence) & (netphorest_frame['Prediction'] == kinase_prediction)]['Posterior']))
 
+				peptide_writer.write("\tPeptide: %s\t Score: %s\t Peptide Significance: %s\t Peptide Fold-Change: %s\t Prediction Confidence: %s\n" % (peptide_sequence,peptide_score,significance,fold_change,confidence))
+		
+		peptide_writer.close()
 
 def write_permutation_scores(savedir,netphorest_frame,num_iterations):
 	print("\tWorking on Permutations")
