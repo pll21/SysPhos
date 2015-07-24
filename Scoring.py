@@ -152,11 +152,11 @@ def compute_peptide_scores(netphorest_frame,schema):
 
 
 def list_all_schemas():
-	return [("Sig_Conf", lambda s,fc,c : c / s),
+	return [("Sig_Conf", lambda s,fc,c : math.log(s,.05) * c),
 			("Fold_Conf", lambda s,fc,c : math.fabs(fc) * c),
-			("Sig_Fold_Conf", lambda s,fc,c : math.fabs(fc) * c / s),
+			("Sig_Fold_Conf", lambda s,fc,c : math.log(s,.05) * math.fabs(fc) * c),
 			("Fold_Conf_Preserve_Sign", lambda s,fc,c : fc * c),
-			("Sig_Fold_Conf_Preserve_Sign", lambda s,fc,c : fc * c / s)]
+			("Sig_Fold_Conf_Preserve_Sign", lambda s,fc,c : math.log(s,.05) * fc * c)]
 
 if __name__ == '__main__':
 	main()

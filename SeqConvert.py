@@ -87,6 +87,3 @@ class SeqConvert:
 			stripped_sequence = row[1]['stripped_sequence']
 			sequence_writer.write(">%s\n%s\n" % (sequence_with_site,stripped_sequence))
 		sequence_writer.close()
-
-sq = SeqConvert("Testing_Data/test.txt")
-sq.get_sequence_frame()
