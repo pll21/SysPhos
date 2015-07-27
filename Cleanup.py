@@ -3,7 +3,7 @@ import os
 import shutil
 
 def clean_all(outdir):
-	os.rename(".sequences.fasta", "%s/sequences.fasta" % outdir)
+	os.remove(".sequences.fasta")
 	os.remove(".NetPhorest_Predictions.txt")
 
 def clean_directories(directories):
