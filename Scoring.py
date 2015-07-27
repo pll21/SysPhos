@@ -10,6 +10,7 @@ import fnmatch
 import argparse
 import pandas as pd
 import random
+import time
 
 #./Scoring.py Validation
 #./Scoring.py Validation/459_Valid_HuangPKA/ValData33noise.txt Results_Folder
@@ -72,7 +73,15 @@ def write_results(data_location,num_iterations,threshold):
 	if(num_iterations > 0):
 		write_permutation_scores(permutation_dir,netphorest_frame,num_iterations)
 	clean.clean_all(savedir)
+	write_readme(savedir,num_iterations,threshold)
 
+def write_readme(savedir,num_iterations,threshold):
+	print("\tWriting README.txt")
+	writer = open("%s/%s" % (savedir, "README.txt"),"wb")
+	date = time.strftime("%m/%d/%y")
+	t = time.strftime("%I:%M:%S")
+	writer.write("Results generated on %s at %s\nP-value threshold used: %s\nNumber of permutations performed: %s" % (date,t,threshold,num_iterations))
+	writer.close()
 
 def write_kinase_scores(savedir,netphorest_frame):
 	print("\tCalculating Kinase Scores")
@@ -105,16 +114,11 @@ def write_peptide_scores(savedir,netphorest_frame):
 			for peptide_entry in peptide_entries:
 				peptide_sequence = peptide_entry[0]
 				peptide_score = peptide_entry[1]
-				"""
-				significance = str(grouped_netphorest_frame.ix[peptide_sequence]['pval'])
-				fold_change = str(grouped_netphorest_frame.ix[peptide_sequence]['fc'])
-				confidence = str(list(netphorest_frame.loc[(netphorest_frame.index == peptide_sequence) & (netphorest_frame['Prediction'] == kinase_prediction)]['Posterior']))
-				"""
 				significance = peptide_sig_scores[peptide_sequence]
 				fold_change = peptide_fc_scores[peptide_sequence]
 				confidence = peptide_prediction_conf_scores[(peptide_sequence,kinase_prediction)]
 
-				peptide_writer.write("\tPeptide: %s\t Score: %s\t Peptide Significance: %s\t Peptide Fold-Change: %s\t Prediction Confidence: %s\n" % (peptide_sequence,peptide_score,significance,fold_change,confidence))
+				peptide_writer.write("\tPeptide: %s\tScore: %s\tPeptide Significance: %s\tPeptide Fold-Change: %s\tPrediction Confidence: %s\n" % (peptide_sequence,peptide_score,significance,fold_change,confidence))
 		
 		peptide_writer.close()
 
