@@ -93,9 +93,9 @@ def write_peptide_scores(savedir,netphorest_frame):
 	for schema in list_all_schemas():
 		peptide_outfile = "%s/Peptide_scores_%s.txt" % (savedir,schema[0])
 		peptide_writer = open(peptide_outfile,'wb')
-		peptide_scores = compute_peptide_scores(netphorest_frame,schema[1])
-		grouped_netphorest_frame = netphorest_frame.groupby(netphorest_frame.index).first()
-		sorted_scores = sorted(peptide_scores.items(),key=lambda item: sum(float(peptide) for peptide in item[1].values()))
+		peptide_power_scores,peptide_sig_scores,peptide_fc_scores,peptide_prediction_conf_scores = compute_peptide_scores(netphorest_frame,schema[1])
+		sorted_scores = sorted(peptide_power_scores.items(),key=lambda item: sum(float(peptide) for peptide in item[1].values()))
+		
 		for entry in sorted_scores:
 			kinase_prediction = str(entry[0])
 			kinase_score = str(sum(float(x) for x in entry[1].values()))
@@ -105,9 +105,14 @@ def write_peptide_scores(savedir,netphorest_frame):
 			for peptide_entry in peptide_entries:
 				peptide_sequence = peptide_entry[0]
 				peptide_score = peptide_entry[1]
+				"""
 				significance = str(grouped_netphorest_frame.ix[peptide_sequence]['pval'])
 				fold_change = str(grouped_netphorest_frame.ix[peptide_sequence]['fc'])
 				confidence = str(list(netphorest_frame.loc[(netphorest_frame.index == peptide_sequence) & (netphorest_frame['Prediction'] == kinase_prediction)]['Posterior']))
+				"""
+				significance = peptide_sig_scores[peptide_sequence]
+				fold_change = peptide_fc_scores[peptide_sequence]
+				confidence = peptide_prediction_conf_scores[(peptide_sequence,kinase_prediction)]
 
 				peptide_writer.write("\tPeptide: %s\t Score: %s\t Peptide Significance: %s\t Peptide Fold-Change: %s\t Prediction Confidence: %s\n" % (peptide_sequence,peptide_score,significance,fold_change,confidence))
 		
@@ -149,19 +154,39 @@ def compute_kinase_scores(netphorest_frame,schema):
 	return kinase_scores
 
 def compute_peptide_scores(netphorest_frame,schema):
+	#maps kinase_name -> (peptide_name -> score)
 	peptide_power_scores = {}
+
+	#maps peptide_name -> p-value
+	peptide_sig_scores = {}
+
+	#maps peptide_name -> fc value
+	peptide_fc_scores = {}
+
+	#maps a tuple (peptide_name,kinase_name) -> confidence
+	peptide_prediction_conf_scores = {}
+
 
 	for row in netphorest_frame.iterrows():
 		peptide_sequence = row[0]
 		curr_series = row[1]
 
-		curr_score = schema(curr_series['pval'], curr_series['fc'], curr_series['Posterior'])
 		prediction = curr_series['Prediction']
+		p_value = curr_series['pval']
+		fc = curr_series['fc']
+		confidence = curr_series['Posterior']
+
+		curr_score = schema(curr_series['pval'], curr_series['fc'], curr_series['Posterior'])
+
 		peptide_power_dict = (peptide_power_scores[prediction] if prediction in peptide_power_scores else {})
 		peptide_power_dict[peptide_sequence] = (peptide_power_dict[peptide_sequence] if peptide_sequence in peptide_power_dict else 0) + curr_score
 		peptide_power_scores[prediction] = peptide_power_dict
 
-	return peptide_power_scores
+		peptide_sig_scores[peptide_sequence] = p_value
+		peptide_fc_scores[peptide_sequence] = fc
+		peptide_prediction_conf_scores[(peptide_sequence,prediction)] = confidence
+
+	return peptide_power_scores,peptide_sig_scores,peptide_fc_scores,peptide_prediction_conf_scores
 
 
 def list_all_schemas():
