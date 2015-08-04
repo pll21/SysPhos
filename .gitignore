@@ -1,0 +1,8 @@
+*.pyc
+Validation/
+Testing_Data/
+.hidden
+Proposals/
+Results_Validation/
+
+.idea/
