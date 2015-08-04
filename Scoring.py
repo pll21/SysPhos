@@ -104,11 +104,12 @@ def write_peptide_scores(savedir,netphorest_frame):
 		peptide_writer = open(peptide_outfile,'wb')
 		peptide_power_scores,peptide_sig_scores,peptide_fc_scores,peptide_prediction_conf_scores = compute_peptide_scores(netphorest_frame,schema[1])
 		sorted_scores = sorted(peptide_power_scores.items(),key=lambda item: sum(float(peptide) for peptide in item[1].values()))
-		
+
+		peptide_writer.write("Kinase\tPeptide\tScore\tSignificance\tFold-Change\tConfidence\n")
 		for entry in sorted_scores:
 			kinase_prediction = str(entry[0])
 			kinase_score = str(sum(float(x) for x in entry[1].values()))
-			peptide_writer.write("Peptide Scores for %s (Score: %s)\n" % (kinase_prediction,kinase_score))
+			peptide_writer.write("%s (Score: %s)\n" % (kinase_prediction,kinase_score))
 
 			peptide_entries = sorted(entry[1].items(),key=lambda item: item[1])
 			for peptide_entry in peptide_entries:
@@ -118,7 +119,7 @@ def write_peptide_scores(savedir,netphorest_frame):
 				fold_change = peptide_fc_scores[peptide_sequence]
 				confidence = peptide_prediction_conf_scores[(peptide_sequence,kinase_prediction)]
 
-				peptide_writer.write("\tPeptide: %s\tScore: %s\tPeptide Significance: %s\tPeptide Fold-Change: %s\tPrediction Confidence: %s\n" % (peptide_sequence,peptide_score,significance,fold_change,confidence))
+				peptide_writer.write("\t%s\t%s\t%s\t%s\t%s\n" % (peptide_sequence,peptide_score,significance,fold_change,confidence))
 		
 		peptide_writer.close()
 

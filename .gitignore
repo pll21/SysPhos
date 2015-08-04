@@ -4,5 +4,7 @@ Testing_Data/
 .hidden
 Proposals/
 Results_Validation/
-
 .idea/
+.sequences.fasta
+Results_Testing_Data/
+.NetPhorest_Predictions.txt
